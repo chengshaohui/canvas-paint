@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>画板</title>
+	<style>
+		input,button {
+			border: none;
+		}
+		body {
+			position: relative;
+			height: 100%;
+			background: rgba(0, 0, 0, .5);
+		}
+		canvas {
+			position: absolute;
+			left: 200px;
+			background: #fff;
+			border: 1px solid #000;
+		}
+		.leftbar {
+			position: absolute;
+			padding: 10px;
+			width: 100px;
+		}
+		button[id] {
+			float: left;
+			padding: 10px;
+			width: 100px;
+			margin-bottom: 12px;
+			border-radius: 10px;
+
+		}
+		.goback {
+			height: 100px;
+			width: 50%;
+			position: relative;
+			left: 40px;
+			line-height: 100px;
+		}
+		.goback input {
+			outline: none;
+			width: 40px;
+			margin-left: 20px;
+			height: 16px;
+		}
+		.goback button {
+			width: 100px;
+			height: 30px;
+			border: none;
+			border-radius: 10px;
+		}
+		.goback input[type='color'] {
+			height: 20px;
+		}
+		.goback input[type='text'] {
+
+		}
+	</style>
+</head>
+<body>
+	<div class="goback">
+		<button>撤销</button>
+		自定义边：<input class="side" type="text" text="" id="n" value="3">
+		颜色：<input  class="input" type="color" name="" id="">
+	</div>
+	<canvas width="960" height="500"></canvas>
+	<div class="leftbar">
+		<button id="drawLine">线</button>
+		<button id="drawStrokeRect">矩形框</button>
+		<button id="drawFillRect">矩形</button>
+		
+		<button id="drawStrokePoly">多边形框</button>
+		<button id="drawFillPoly">多边形</button>
+		<button id="drawlinearRect">渐变矩形</button>
+		<button id="drawFillCircle">圆</button>
+		<button id="drawStrokeCircle">圆框</button>
+		<button id="drawRadialCircle">径向渐变圆</button>
+		<button id="drawText">写字</button>
+	</div>
+</body>
+</html>
+<script>
+	var canvas = document.querySelector('canvas'),
+		paint = canvas.getContext('2d'),
+		btn = document.querySelector('button'),
+		arr = [],
+		input = document.querySelector('.input'),
+		color = '#000',
+		drayType = 'drawLine',
+		btnTypes = document.querySelectorAll('button[id]'),
+		nobj = document.querySelector('#n'),
+		n = 3
+	// 获取n的值
+	nobj.onchange = function () {
+		n = this.value
+	}
+	// 改变颜色
+	input.onchange = function () {
+		color = this.value
+	}
+	// 回退效果
+	btn.onclick = function () {
+		arr.pop()
+		if (arr.length >= 1) {
+			paint.putImageData(arr[arr.length - 1], 0, 0)
+		} else {
+			alert('不能再后退了')
+			paint.clearRect(0, 0, canvas.width, canvas.height)
+		}
+	}
+	// 获取btn的id值，确定drayType
+	btnTypes.forEach(value => {
+		value.onclick = function () {
+			drayType = this.id
+			btnTypes.forEach(value => {
+				value.classList.remove('active')
+			})
+			this.classList.add('active')
+		}
+	})
+	canvas.onmousedown = function (e) {
+		var ox = e.offsetX,
+			oy = e.offsetY
+		canvas.onmousemove = function (e) {
+			var	newox = e.offsetX,
+				newoy = e.offsetY,
+				w = newox - ox,
+				h = newoy - oy,
+				r = Math.sqrt(Math.pow(newox - ox, 2) + Math.pow(newoy - newoy, 2))
+			paint.clearRect(0, 0, canvas.width, canvas.height)
+			if (arr.length >= 1) {
+				var imgdata = arr[arr.length - 1]
+				paint.putImageData(imgdata, 0, 0)
+			}
+			class Draw {
+				constructor(paint) {
+					this.paint = paint
+					this.color = color
+					this.ox = ox
+					this.oy = oy
+					this.newox = newox
+					this.newoy = newoy
+					this.w = w
+					this.h = h
+					this.r = r
+				}
+				//线
+				drawLine () {
+					this.paint.beginPath()
+					this.paint.moveTo(this.ox, this.oy)
+					this.paint.lineTo(this.newox, this.newoy)
+					this.paint.strokeStyle = this.color
+					this.paint.stroke()
+				}
+				//矩形框
+				drawStrokeRect () {
+					this.paint.strokeStyle = this.color
+					this.paint.strokeRect(this.ox, this.oy, this.w, this.h)
+				}
+				//矩形
+				drawFillRect () {
+					this.paint.fillStyle = color
+					this.paint.fillRect(this.ox, this.oy, this.w, this.h)
+				}
+				//多边形框
+				drawStrokePoly () {
+					this.paint.beginPath()
+					var ran = 360/n
+
+					for (var i = 0; i < n; i++) {
+						this.paint.lineTo(this.ox+Math.cos((i*ran+45)*(Math.PI/180))*this.r,this.oy+Math.sin((i*ran+45)*(Math.PI/180))*this.r);
+					}
+					this.paint.closePath()
+					this.paint.strokeStyle = this.color
+					this.paint.stroke()
+				}
+				//多边形
+				drawFillPoly () {
+					this.paint.beginPath()
+					var ran = 360/n
+					for (var i = 0; i < n; i++) {
+						this.paint.lineTo(this.ox+Math.cos((i*ran+45)*(Math.PI/180))*this.r,this.oy+Math.sin((i*ran+45)*(Math.PI/180))*this.r);
+					}
+					this.paint.closePath()
+					this.paint.fillStyle = color
+					this.paint.fill()
+				}
+				drawlinearRect () {
+					this.paint.beginPath()
+					var linear = this.paint.createLinearGradient(this.ox, this.oy, this.newox, this.oy)
+					linear.addColorStop(.2, 'red')
+					linear.addColorStop(.4, 'orange')
+					linear.addColorStop(.6, 'yellow')
+					linear.addColorStop(.8, 'green')
+					linear.addColorStop(1 ,'blue')
+					this.paint.closePath()
+					this.paint.fillStyle = linear
+					this.paint.fillRect(this.ox, this.oy, this.w, this.h)
+				}
+				drawFillCircle () {
+					this.paint.beginPath()
+					this.paint.arc(this.ox, this.oy, this.r, 0, 2 * Math.PI)
+					this.paint.closePath()
+					this.paint.fillStyle = this.color
+					this.paint.fill()
+				}
+				drawStrokeCircle () {
+					this.paint.beginPath()
+					this.paint.arc(this.ox, this.oy, this.r, 0, 2 * Math.PI)
+					this.paint.closePath()
+					this.paint.strokeStyle = this.color
+					this.paint.stroke()
+				}
+				drawRadialCircle () {
+					this.paint.beginPath()
+					var radial = this.paint.createRadialGradient(this.ox, this.oy, 0, this.ox, this.oy, this.r)
+					radial.addColorStop(.2, 'red')
+					radial.addColorStop(.4, 'orange')
+					radial.addColorStop(.6, 'yellow')
+					radial.addColorStop(.8, 'green')
+					radial.addColorStop(1 ,'blue')
+					this.paint.arc(this.ox, this.oy, this.r, 0, 2 * Math.PI)
+					this.paint.closePath()
+					this.paint.fillStyle = radial
+					this.paint.fill()
+				}
+			}
+			var draw = new Draw(paint, ox, oy, newox, newoy, w, h, r)
+			// 根据drayType类型来绘制
+			switch (drayType) {
+				case 'drawStrokeRect' : 
+					draw.drawStrokeRect()
+					break
+				case 'drawLine': 
+					draw.drawLine(ox, oy, newoy, newoy)
+					break
+				case 'drawFillRect':
+					draw.drawFillRect()
+					break
+				case 'drawStrokePoly':
+					draw.drawStrokePoly()
+					break
+				case 'drawFillPoly':
+					draw.drawFillPoly()
+					break
+				case 'drawlinearRect':
+					draw.drawlinearRect()
+					break
+				case 'drawFillCircle':
+					draw.drawFillCircle()
+					break
+				case 'drawStrokeCircle':
+					draw.drawStrokeCircle()
+					break
+				case 'drawRadialCircle':
+					draw.drawRadialCircle()
+					break
+				default: break
+			}
+		}
+		canvas.onmouseup = function (e) {
+			if (drayType == 'drawText') {
+				var str = prompt('请输入文字', '您好')
+				if (str) {
+					paint.font = '40px 宋体'
+					paint.fillStyle = color;
+					paint.textAlign = 'right'
+					paint.fillText(str, ox, oy)
+				}
+			}
+			img = paint.getImageData(0, 0, canvas.width, canvas.height)
+			arr.push(img)
+			this.onmousemove = null
+		}
+	}
+	
+
+</script>
